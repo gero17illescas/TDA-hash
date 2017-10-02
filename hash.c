@@ -1,6 +1,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include "hash.h"
+#include "testing.h"
 #include "lista.h"
 #define TAM_INICIAL 10
 
@@ -9,24 +11,23 @@
  * *****************************************************************/
 
 struct campo_hash{
-	char* clave; (siempre cadena)
+	char* clave;
 	void* valor;
-};
+}typedef campo_t;
+
 struct hash{
-	campo_hash** tabla;
-	size_t tam; (m que es la capacidad maxima de la estructura)
-	size_t cant; (n que es la cantidad de elementos que esta en el hash)
-};
+	lista_t** tabla;
+	size_t tam; //(m que es la capacidad maxima de la estructura)
+	size_t cant; //(n que es la cantidad de elementos que esta en el hash)
+    hash_destruir_dato_t destruir;
+}typedef hash_t;
+
 struct hash_iter{
-	lista_t *hash; 
-	lista_iter* iter = NULL;
-	size_t* pos_actual;
+	const hash_t* hash;
+    lista_t* lista;
+	size_t pos;
+}typedef hash_iter_t;
 
-}
-
-typedef struct hash hash_t;
-typedef struct campo_hash campo_hash_t;
-typedef struct hash_iter hash_iter_t;
 
 /* *****************************************************************
  *                DEFINICION DE FUNCIONES AUXILIARES
@@ -36,24 +37,39 @@ typedef struct hash_iter hash_iter_t;
 // tipo de función para destruir dato
 typedef void (*hash_destruir_dato_t)(void *);
 
+size_t funcion_hash(const char* s, size_t hash_tamaño){
+    size_t hashvalue;
+    for(hashvalue = 0; *s != '\0';s++)
+        hashvalue = *s + 11 * hashvalue;
+    return hashvalue % hash_tamaño;
+}
+
 campo_hash_t* crear_campo_hash(const char* clave, void* dato){
-	campo_hash_t* campo_hash = malloc(sizeof(campo_hash_t*)
-	if (!campo_hash) return NULL;
-	campo_hash -> clave = strc(malloc(strlen(clave)+1),clave);
-	campo_hash -> dato = dato;
+	campo_t* campo_hash = malloc(sizeof(campo_t*));
+	if(!campo_hash) return NULL;
+	campo_hash->clave = malloc(sizeof(const char)* strlen(clave)+1);
+    strcpy(campo_hash->clave, clave);
+	campo_hash->dato = dato;
 	return campo_hash;
 }
-lista_t** crear_tabla(int tamaño){
-	lista_t** tabla = malloc(sizeof(lista_t*)*TAM_INICIAL);
-	if (!tabla){
-		return NULL;
-	}
-	for(int i = 0; i < tamaño;i++){
-		tabla[i] = lista_crear();
-	}
-	return tabla;
 
+bool crear_tabla(hash_t* hash){
+	hash->tabla = malloc(sizeof(lista_t*)* hash->tam);
+	if(!hash->tabla){
+        free(hash);
+		return false;
+	}
+	for(int i = 0; i < hash->tam; i++){
+		hash->tabla[i] = lista_crear();
+        if(!hash->tabla[i]){
+            free(hash->tabla);
+            free(hash);
+            return false;
+        }
+	}
+	return true;
 }
+
 // Recibe un puntero a un struct hash y busca en el campo hash cuya 
 // clave asignada sea la recibida por parametro, si tal campo no se 
 // encontro devuelve NULL. Si bool borrar es true, elimina la refer
@@ -79,9 +95,7 @@ campo_hash_t* obtener_campo_hash(hash_t *hash, const char *clave, bool borrar){
 	lista_iter_borrar(iter);
 	return registro;
 }	
-int funcion_hash(const char* clave){
 
-}
 /* *****************************************************************
  *                    PRIMITIVAS DEL HASH
  * *****************************************************************/
@@ -90,19 +104,12 @@ int funcion_hash(const char* clave){
 /* Crea el hash
  */
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
-	hash_t*  hash = malloc(sizeof(hash_t*))
-	if (!hash){
-		return NULL;
-	}
-	lista_t** tabla = generar_tabla(),
-	if (!tabla){
-		free(hash);
-		return NULL;
-	}
-	hash -> destructor = destruir_dato;
-	hash -> tabla = crear_tabla();
-	hash -> tam = TAM_INICIAL;
-	hash -> cant = 0;
+	hash_t* hash = malloc(sizeof(hash_t*));
+	if (!hash) return NULL;
+	if (!crear_tabla(hash)) return NULL;
+	if(destrui_dato) hash->destruir = destruir_dato;
+	hash->tam = TAM_INICIAL;
+	hash->cant = 0;
 	return hash;
 }
 
