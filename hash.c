@@ -80,7 +80,7 @@ campo_hash_t* buscar_campo_hash(hash_t *hash, const char *clave){
 	size_t indice = funcion_hash(clave, hash->tam);
 	campo_hash_t* registro = NULL;
 	lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
-	while (!lista_iter_al_final(iter)){
+	while(!lista_iter_al_final(iter)){
 		registro = lista_iter_ver_actual(iter);
 		if(strcmp(registro->clave,clave)==0){
             free(iter);
@@ -120,9 +120,8 @@ hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
  * Post: Se almacenó el par (clave, dato)
  */
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
-	int indice = fhash(clave);
+	size_t indice = funcion_hash(clave, hash->tam);
 	if (hash_pertenece(hash,clave)){
-
 	}
 	lista_insertar_ultimo(hash->tabla[indice],crear_campo_hash(clave,dato));
 }
@@ -159,13 +158,20 @@ void* hash_borrar(hash_t *hash, const char *clave){
  * devuelve NULL.
  * Pre: La estructura hash fue inicializada
  */
-void *hash_obtener(const hash_t *hash, const char *clave);
+void* hash_obtener(const hash_t *hash, const char *clave){
+    campo_hash_t* auxiliar = buscar_campo_hash(hash, clave);
+    if(!auxiliar) return NULL;
+    void* dato = auxiliar->valor;
+    free(auxiliar->clave);
+    free(auxiliar);
+    return dato;
+}
 
 /* Determina si clave pertenece o no al hash.
  * Pre: La estructura hash fue inicializada
  */
 bool hash_pertenece(const hash_t *hash, const char *clave){
-	return obtener_campo_hash(hash,clave,false)==NULL;
+	return !buscar_campo_hash(hash, clave);
 
 }
 
