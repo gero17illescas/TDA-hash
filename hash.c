@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include "hash.h"
 #include "testing.h"
@@ -13,7 +14,7 @@
 struct campo_hash{
 	char* clave;
 	void* valor;
-}typedef campo_t;
+}typedef campo_hash_t;
 
 struct hash{
 	lista_t** tabla;
@@ -45,11 +46,11 @@ size_t funcion_hash(const char* s, size_t hash_tamaño){
 }
 
 campo_hash_t* crear_campo_hash(const char* clave, void* dato){
-	campo_t* campo_hash = malloc(sizeof(campo_t*));
+	campo_hash_t* campo_hash = malloc(sizeof(campo_hash_t*));
 	if(!campo_hash) return NULL;
 	campo_hash->clave = malloc(sizeof(const char)* strlen(clave)+1);
     strcpy(campo_hash->clave, clave);
-	campo_hash->dato = dato;
+	campo_hash->valor = dato;
 	return campo_hash;
 }
 
@@ -72,28 +73,24 @@ bool crear_tabla(hash_t* hash){
 
 // Recibe un puntero a un struct hash y busca en el campo hash cuya 
 // clave asignada sea la recibida por parametro, si tal campo no se 
-// encontro devuelve NULL. Si bool borrar es true, elimina la refer
-// encia el campo hash de la lista correspodiente.
+// encontro devuelve NULL.
 // Pre: el hash fue creado
-campo_hash_t* obtener_campo_hash(hash_t *hash, const char *clave, bool borrar){
-	int indice = fhash(clave);
+// Post: Devuelve el campo si fue encontrado
+campo_hash_t* buscar_campo_hash(hash_t *hash, const char *clave){
+	size_t indice = funcion_hash(clave, hash->tam);
 	campo_hash_t* registro = NULL;
-	lista_iter* iter = lista_iter_crear(hash->tabla[indice]);
-	
+	lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
 	while (!lista_iter_al_final(iter)){
 		registro = lista_iter_ver_actual(iter);
-		if (strcmp(registro->clave,clave)==0){
-			if(borrar){
-				lista_iter_borrar(iter);
-				hash->cant--;
-			}
-			break;
-		}
+		if(strcmp(registro->clave,clave)==0){
+            free(iter);
+            return registro;
+        }
 		lista_iter_avanzar(iter);
+        registro = lista_iter_ver_actual(iter);
 	}
-
-	lista_iter_borrar(iter);
-	return registro;
+	free(iter);
+	return NULL;
 }	
 
 /* *****************************************************************
@@ -103,11 +100,15 @@ campo_hash_t* obtener_campo_hash(hash_t *hash, const char *clave, bool borrar){
 
 /* Crea el hash
  */
-hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
+hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
 	hash_t* hash = malloc(sizeof(hash_t*));
 	if (!hash) return NULL;
 	if (!crear_tabla(hash)) return NULL;
-	if(destrui_dato) hash->destruir = destruir_dato;
+	if(destruir_dato){
+        hash->destruir = destruir_dato;
+    }else{
+        hash->destruir = NULL;
+    }
 	hash->tam = TAM_INICIAL;
 	hash->cant = 0;
 	return hash;
@@ -133,13 +134,25 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
  * Post: El elemento fue borrado de la estructura y se lo devolvió,
  * en el caso de que estuviera guardado.
  */
-void *hash_borrar(hash_t *hash, const char *clave){
-	campo_hast_t* registro = obtener_campo_hash(hash,clave,true);
-	if (!registro) return NULL;
-	void* dato = registro->dato;
-	free(registro->clave);
-	free(registro);
-	return dato;
+void* hash_borrar(hash_t *hash, const char *clave){
+    size_t indice = funcion_hash(clave, hash->tam);
+    lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
+	campo_hash_t* registro = lista_iter_ver_actual(iter);
+    while(registro){
+        if(strcmp(registro->clave, clave) == 0){
+            campo_hash_t* aux = lista_iter_borrar(iter);
+            void* dato = aux->valor;
+            free(aux->clave);
+            free(aux);
+            hash->cant--;
+            free(iter);
+            return dato;
+        }
+        lista_iter_avanzar(iter);
+        registro = lista_iter_ver_actual(iter);
+    }
+	free(iter);
+    return NULL;
 }
 
 /* Obtiene el valor de un elemento del hash, si la clave no se encuentra
@@ -159,7 +172,10 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 /* Devuelve la cantidad de elementos del hash.
  * Pre: La estructura hash fue inicializada
  */
-size_t hash_cantidad(const hash_t *hash);
+size_t hash_cantidad(const hash_t* hash){
+    return hash->cant;
+}
+
 
 /* Destruye la estructura liberando la memoria pedida y llamando a la función
  * destruir para cada par (clave, dato).
