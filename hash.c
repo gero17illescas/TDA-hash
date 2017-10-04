@@ -25,8 +25,9 @@ struct hash{
 
 struct hash_iter{
 	const hash_t* hash;
-    lista_t* lista;
+    lista_iter_t* lista_iter;
 	size_t pos;
+    size_t iterados;
 }typedef hash_iter_t;
 
 bool hash_redimensionar(hash_t* hash, size_t tam_nuevo);
