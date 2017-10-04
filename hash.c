@@ -6,7 +6,7 @@
 #include "testing.h"
 #include "lista.h"
 #define TAM_INICIAL 10
-
+#define COEF_REDIM 2
 /* *****************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
@@ -29,6 +29,7 @@ struct hash_iter{
 	size_t pos;
 }typedef hash_iter_t;
 
+bool hash_redimensionar(hash_t* hash, size_t tam_nuevo);
 
 /* *****************************************************************
  *                DEFINICION DE FUNCIONES AUXILIARES
@@ -38,11 +39,11 @@ struct hash_iter{
 // tipo de función para destruir dato
 typedef void (*hash_destruir_dato_t)(void *);
 
-size_t funcion_hash(const char* s, size_t hash_tamaño){
+size_t funcion_hash(const char* s, size_t hash_tam){
     size_t hashvalue;
     for(hashvalue = 0; *s != '\0';s++)
         hashvalue = *s + 11 * hashvalue;
-    return hashvalue % hash_tamaño;
+    return hashvalue % hash_tam;
 }
 
 campo_hash_t* crear_campo_hash(const char* clave, void* dato){
@@ -76,7 +77,7 @@ bool crear_tabla(hash_t* hash){
 // encontro devuelve NULL.
 // Pre: el hash fue creado
 // Post: Devuelve el campo si fue encontrado
-campo_hash_t* buscar_campo_hash(hash_t *hash, const char *clave){
+campo_hash_t* buscar_campo_hash(const hash_t *hash, const char *clave){
 	size_t indice = funcion_hash(clave, hash->tam);
 	campo_hash_t* registro = NULL;
 	lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
@@ -120,10 +121,25 @@ hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
  * Post: Se almacenó el par (clave, dato)
  */
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
-	size_t indice = funcion_hash(clave, hash->tam);
-	if (hash_pertenece(hash,clave)){
+    if(hash->cant/hash->tam >= 0.7){
+        hash_redimensionar(hash, hash->tam*COEF_REDIM);
+    }
+    size_t indice = funcion_hash(clave, hash->tam);
+    campo_hash_t* campo_nuevo = crear_campo_hash(clave, dato);
+    if(!campo_nuevo) return false;
+    campo_hash_t* campo_existe = buscar_campo_hash(hash, clave);
+	if (!campo_existe){
+        if(!lista_insertar_ultimo(hash->tabla[indice], campo_nuevo)){
+            return false;
+        }
+        return true;
 	}
-	lista_insertar_ultimo(hash->tabla[indice],crear_campo_hash(clave,dato));
+    campo_existe->valor = campo_nuevo->valor;
+    if(hash->destruir){
+        hash->destruir(campo_existe->valor);
+    }
+    free(campo_nuevo);
+    return true;
 }
 
 
@@ -134,6 +150,9 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
  * en el caso de que estuviera guardado.
  */
 void* hash_borrar(hash_t *hash, const char *clave){
+    if(hash->cant/hash->tam <= 0.3 && hash->tam >= TAM_INICIAL){
+       hash_redimensionar(hash, hash->tam/COEF_REDIM);
+    }
     size_t indice = funcion_hash(clave, hash->tam);
     lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
 	campo_hash_t* registro = lista_iter_ver_actual(iter);
@@ -152,6 +171,12 @@ void* hash_borrar(hash_t *hash, const char *clave){
     }
 	free(iter);
     return NULL;
+}
+
+bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
+    lista_t** tabla_nueva = malloc(sizeof(lista_t*) * tam_nuevo);
+    if(!tabla_nueva) return false;
+
 }
 
 /* Obtiene el valor de un elemento del hash, si la clave no se encuentra
@@ -188,7 +213,23 @@ size_t hash_cantidad(const hash_t* hash){
  * Pre: La estructura hash fue inicializada
  * Post: La estructura hash fue destruida
  */
-void hash_destruir(hash_t *hash);
+void hash_destruir(hash_t *hash){
+    for(int i = 0; i < hash->tam; i++){
+        lista_iter_t* iter_lista = lista_iter_crear(hash->tabla[i]);
+        campo_hash_t* campo_hash = lista_iter_borrar(iter_lista);
+        while(campo_hash){
+            if(hash->destruir){
+                hash->destruir(campo_hash->valor);
+            }
+            free(campo_hash->valor);
+            free(campo_hash);
+        }
+        lista_iter_destruir(iter_lista);
+        lista_destruir(hash->tabla[i], free);
+    }
+    free(hash->tabla);
+    free(hash);
+}
 
 /* Iterador del hash */
 
