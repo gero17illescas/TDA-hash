@@ -80,10 +80,9 @@ bool crear_tabla(hash_t* hash){
 // Post: Devuelve el campo si fue encontrado
 campo_hash_t* buscar_campo_hash(const hash_t *hash, const char *clave){
 	size_t indice = funcion_hash(clave, hash->tam);
-	campo_hash_t* registro = NULL;
-	lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
+    lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
+	campo_hash_t* registro = lista_iter_ver_actual(iter);
 	while(!lista_iter_al_final(iter)){
-		registro = lista_iter_ver_actual(iter);
 		if(strcmp(registro->clave,clave)==0){
             free(iter);
             return registro;
@@ -175,9 +174,26 @@ void* hash_borrar(hash_t *hash, const char *clave){
 }
 
 bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
-    lista_t** tabla_nueva = malloc(sizeof(lista_t*) * tam_nuevo);
-    if(!tabla_nueva) return false;
-
+    hash_t* hash_redim = malloc(sizeof(hash_t));
+    if(!hash_redim) return false;
+    hash_redim->tam = tam_nuevo;
+    hash_redim->destruir = hash->destruir;
+    if(!crear_tabla(hash_redim)) return false;
+    hash_iter_t* iter_hash = hash_iter_crear(hash);
+    while(!hash_iter_al_final(iter_hash)){
+        campo_hash_t* campo_aux = lista_iter_ver_actual(iter_hash->lista_iter);
+        if(!hash_guardar(hash_redim, campo_aux->clave, campo_aux->valor)){
+            hash_iter_destruir(iter_hash);
+            hash_destruir(hash_redim);
+        }
+        hash_iter_avanzar(iter_hash);
+    }
+    hash_redim->cant = hash->cant;
+    hash_iter_destruir(iter_hash);
+    hash_t* hash_aux = hash;
+    hash = hash_redim;
+    hash_destruir(hash_aux);
+    return true;
 }
 
 /* Obtiene el valor de un elemento del hash, si la clave no se encuentra
@@ -235,16 +251,21 @@ void hash_destruir(hash_t *hash){
 /* Iterador del hash */
 
 // Crea iterador
-hash_iter_t *hash_iter_crear(const hash_t *hash);
+hash_iter_t* hash_iter_crear(const hash_t *hash);
 
 // Avanza iterador
 bool hash_iter_avanzar(hash_iter_t *iter);
 
 // Devuelve clave actual, esa clave no se puede modificar ni liberar.
-const char *hash_iter_ver_actual(const hash_iter_t *iter);
+const char* hash_iter_ver_actual(const hash_iter_t *iter);
 
 // Comprueba si terminó la iteración
 bool hash_iter_al_final(const hash_iter_t *iter);
 
 // Destruye iterador
-void hash_iter_destruir(hash_iter_t* iter);
+void hash_iter_destruir(hash_iter_t* iter){
+    if(iter->lista_iter){
+        lista_iter_destruir(iter->lista_iter);
+    }
+    free(iter);
+}
