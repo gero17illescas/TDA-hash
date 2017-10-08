@@ -75,13 +75,12 @@ lista_t** crear_tabla(size_t tam){
 // Pre: el hash fue creado
 // Post: Devuelve el campo si fue encontrado
 campo_hash_t* buscar_campo_hash(const hash_t *hash, const char *clave){
-    if(hash->cant == 0)
-        return NULL;
+    if(hash->cant == 0) return NULL;
     size_t pos = funcion_hash(clave, hash->tam);
 
     lista_iter_t* iter_lista = lista_iter_crear(hash->tabla[pos]);
-    if(!iter_lista)
-        return NULL;
+	if(!iter_lista)
+		return NULL;
 
     campo_hash_t* campo;
     while(!lista_iter_al_final(iter_lista)){
@@ -301,26 +300,29 @@ hash_iter_t* hash_iter_crear(const hash_t *hash){
 bool hash_iter_avanzar(hash_iter_t *iter){
 	//Si llegamos al final de una lista de un elemento de la tabal 
 	//vamos l siguiente elemento
-	if(hash_iter_al_final(iter)){
-		iter->
-		return false;
-	if(lista_iter_al_final(iter->lista_iter)){
-		size_t i = iter->pos;
+	if (!iter->lista_iter) return false;
+	if(lista_iter_avanzar(iter-> lista_iter) && lista_iter_al_final(iter->lista_iter)){
 		lista_iter_destruir(iter->lista_iter);
-		while (i<iter->hash->tam && lista_esta_vacia(iter->hash->tabla[i])){
-			i++;
-		}
-		iter -> lista_iter = lista_iter_crear(iter->hash->tabla[i]);
+	}
+	else{
+		iter->iterados++;
 		return true;
 	}
-	lista_iter_avanzar(iter-> lista_iter);
-	return true;
 
+	size_t i = iter->pos;
+	
+	while (i<iter->hash->tam && lista_esta_vacia(iter->hash->tabla[i])){
+		i++;
+	}
+	iter -> lista_iter = lista_iter_crear(iter->hash->tabla[i]);
+	iter->iterados++;
+	return true;
 }
 
 // Devuelve clave actual, esa clave no se puede modificar ni liberar.
 const char* hash_iter_ver_actual(const hash_iter_t *iter){
-	if(!iter) return NULL;
+	if(!iter || hash_iter_al_final(iter)) 
+		return NULL;
 	campo_hash_t* actual = lista_iter_ver_actual(iter->lista_iter);
 	return actual->clave;
 }
@@ -330,13 +332,7 @@ const char* hash_iter_ver_actual(const hash_iter_t *iter){
  * algun elemento siguiente es posible iterar o no.
 */
 bool hash_iter_al_final(const hash_iter_t *iter){
-	size_t i = iter->pos;
-	if(!lista_iter_al_final(iter->lista_iter)) return false;
-	while (i < iter->hash->tam && lista_esta_vacia(iter->hash->tabla[i])){
-		i++;
-	}
-
-	return i == iter->hash->tam;
+	return iter->iterados == iter->hash->cant;
 }
 
 // Destruye iterador
@@ -344,5 +340,4 @@ void hash_iter_destruir(hash_iter_t* iter){
 	if(iter->lista_iter){
 		lista_iter_destruir(iter->lista_iter);
 	}
-	free(iter);
 }
