@@ -7,6 +7,8 @@
 #include "lista.h"
 #define TAM_INICIAL 1000
 #define COEF_REDIM 2
+#define UMBRAL_MAX 0.7;
+#define UMBRAL_MIN 0.3;
 /* *****************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
@@ -157,6 +159,10 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato) {
     }*/
     if(hash_pertenece(hash, clave)){
 		campo_hash_t* campo = buscar_campo_hash(hash, clave);
+        if(hash->destruir){
+            void* dato_aux = campo->valor;
+            hash->destruir(dato_aux);
+        }
 		campo->valor = dato;
 		return true;
 	}
@@ -178,7 +184,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato) {
  */
 void* hash_borrar(hash_t *hash, const char *clave){
     if(hash->cant == 0) return NULL;
-	/*if(hash->cant/hash->tam <= 0.3 && hash->tam >= TAM_INICIAL){
+	/*if(((hash->cant/hash->tam) <= 0.3) && hash->tam >= TAM_INICIAL){
 	   hash_redimensionar(hash, hash->tam/COEF_REDIM);
 	}*/
 	size_t indice = funcion_hash(clave, hash->tam);
@@ -203,32 +209,36 @@ void* hash_borrar(hash_t *hash, const char *clave){
 }
 
 bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
-	hash_t* hash_redim = malloc(sizeof(hash_t));
-	if(!hash_redim) return false;
-	hash_redim->tam = tam_nuevo;
+    hash_t* hash_redim = malloc(sizeof(hash_t));
+    if(!hash_redim) return false;
+    hash_redim->tam = tam_nuevo;
     hash_redim->cant = 0;
     lista_t** tabla_redim = crear_tabla(tam_nuevo);
-	if(!tabla_redim){
+    hash_redim->destruir=hash->destruir;
+    if(!tabla_redim){
         free(hash_redim);
         return false;
     }
     hash_redim->tabla = tabla_redim;
-	hash_iter_t* iter_hash = hash_iter_crear(hash);
-	while(!hash_iter_al_final(iter_hash)){
-		campo_hash_t* campo_aux = lista_iter_ver_actual(iter_hash->lista_iter);
-		if(!hash_guardar(hash_redim, campo_aux->clave, campo_aux->valor)){
-			hash_iter_destruir(iter_hash);
-			hash_destruir(hash_redim);
-		}
-		hash_iter_avanzar(iter_hash);
-	}
-	hash->cant = hash_redim->cant;
-	hash_iter_destruir(iter_hash);
+    hash_iter_t* iter_hash = hash_iter_crear(hash);
+    while(!hash_iter_al_final(iter_hash)){
+        campo_hash_t* campo_aux = lista_iter_ver_actual(iter_hash->lista_iter);
+        if(!hash_guardar(hash_redim, campo_aux->clave, campo_aux->valor)){
+            hash_iter_destruir(iter_hash);
+            hash_destruir(hash_redim);
+            return false;
+        }
+        hash_iter_avanzar(iter_hash);
+    }
+    hash->cant = hash_redim->cant;
+    hash_iter_destruir(iter_hash);
+    hash->destruir=NULL;
     destruir_tabla(hash->tabla, hash->tam, hash->destruir);
-	hash->tabla = hash_redim->tabla;
-	hash->tam = tam_nuevo;
-    hash_destruir(hash_redim);
-	return true;
+    hash->destruir = hash_redim->destruir;
+    hash->tabla = hash_redim->tabla;
+    hash->tam = tam_nuevo;
+    free(hash_redim);
+    return true;
 }
 
 /* Obtiene el valor de un elemento del hash, si la clave no se encuentra
@@ -300,23 +310,29 @@ hash_iter_t* hash_iter_crear(const hash_t *hash){
 bool hash_iter_avanzar(hash_iter_t *iter){
 	//Si llegamos al final de una lista de un elemento de la tabal 
 	//vamos l siguiente elemento
-	if (!iter->lista_iter) return false;
-	if(lista_iter_avanzar(iter-> lista_iter) && lista_iter_al_final(iter->lista_iter)){
-		lista_iter_destruir(iter->lista_iter);
-	}
-	else{
-		iter->iterados++;
-		return true;
-	}
-
-	size_t i = iter->pos;
-	
-	while (i<iter->hash->tam && lista_esta_vacia(iter->hash->tabla[i])){
-		i++;
-	}
-	iter -> lista_iter = lista_iter_crear(iter->hash->tabla[i]);
-	iter->iterados++;
-	return true;
+    if (hash_iter_al_final(iter))
+        return false;
+    if (lista_iter_avanzar(iter->lista_iter) && !lista_iter_al_final(iter->lista_iter)) {
+        iter->iterados++;
+        return true;
+    }
+    lista_iter_destruir(iter->lista_iter);
+    iter->pos++;
+    iter->iterados++;
+    size_t i = iter->pos;
+    while(i < iter->hash->tam){
+        if(!lista_esta_vacia(iter->hash->tabla[i])){
+            iter->lista_iter = lista_iter_crear(iter->hash->tabla[i]);
+            if(!iter->lista_iter)
+                return false;
+            iter->pos = i;
+            return true;
+        }
+        i++;
+    }
+    iter->lista_iter = NULL;
+    iter->pos = iter->hash->tam - 1;
+    return false;
 }
 
 // Devuelve clave actual, esa clave no se puede modificar ni liberar.
@@ -340,4 +356,5 @@ void hash_iter_destruir(hash_iter_t* iter){
 	if(iter->lista_iter){
 		lista_iter_destruir(iter->lista_iter);
 	}
+    free(iter);
 }
