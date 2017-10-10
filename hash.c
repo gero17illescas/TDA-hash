@@ -3,12 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hash.h"
-#include "testing.h"
 #include "lista.h"
 #define TAM_INICIAL 1000
 #define COEF_REDIM 2
-#define UMBRAL_MAX 0.7;
-#define UMBRAL_MIN 0.3;
+#define UMBRAL_MAX 0.7
+#define VALOR_MIN 4
 /* *****************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
@@ -154,9 +153,9 @@ void destruir_campo_hash(hash_t *hash, campo_hash_t* campo){
  * Post: Se almacenó el par (clave, dato)
  */
 bool hash_guardar(hash_t *hash, const char *clave, void *dato) {
-    /*if (hash->cant / hash->tam >= 0.7) {
+    if((hash->cant/hash->tam) >= UMBRAL_MAX){
         hash_redimensionar(hash, hash->tam * COEF_REDIM);
-    }*/
+    }
     if(hash_pertenece(hash, clave)){
 		campo_hash_t* campo = buscar_campo_hash(hash, clave);
         if(hash->destruir){
@@ -184,9 +183,9 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato) {
  */
 void* hash_borrar(hash_t *hash, const char *clave){
     if(hash->cant == 0) return NULL;
-	/*if(((hash->cant/hash->tam) <= 0.3) && hash->tam >= TAM_INICIAL){
-	   hash_redimensionar(hash, hash->tam/COEF_REDIM);
-	}*/
+	if((hash->cant* VALOR_MIN)<= hash->tam && hash->cant * COEF_REDIM >= TAM_INICIAL){
+	   hash_redimensionar(hash, hash->cant*COEF_REDIM);
+	}
 	size_t indice = funcion_hash(clave, hash->tam);
     if(lista_esta_vacia(hash->tabla[indice])) return NULL;
 	lista_iter_t* iter = lista_iter_crear(hash->tabla[indice]);
@@ -299,6 +298,10 @@ hash_iter_t* hash_iter_crear(const hash_t *hash){
 		i++;
 	}
 	iter->lista_iter = lista_iter_crear(hash->tabla[i]);
+    if(!iter->lista_iter){
+        free(iter);
+        return NULL;
+    }
 	iter->pos = i;
 	return iter;
 }
