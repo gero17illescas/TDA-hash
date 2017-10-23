@@ -47,6 +47,17 @@ size_t funcion_hash(const char* s, size_t hash_tam){
 	return hashvalue % hash_tam;
 }
 
+/* Recibe un puntero a un funcion destruir campo hash y elimina el dato,
+ *  la clave y el campo- Si recibe un puntero nulo no hace nada.
+ */
+void destruir_campo_hash(hash_destruir_dato_t destruir_dato, campo_hash_t* campo){
+	if(!campo) return;
+	if(destruir_dato)
+		destruir_dato(campo->valor);
+	free(campo->clave);
+	free(campo);
+}
+
 /* Crea un hash nuevo, devuelve NULl si hubo algun problema
  */
 hash_t* _hash_crear(hash_destruir_dato_t destruir_dato,size_t tam){
@@ -68,12 +79,23 @@ hash_t* _hash_crear(hash_destruir_dato_t destruir_dato,size_t tam){
  * La clave es copiada.
  */
 campo_hash_t* crear_campo_hash(const char* clave, void* dato){
+	if(strlen(clave)==0) return NULL;
 	campo_hash_t* campo_hash = malloc(sizeof(campo_hash_t));
 	if(!campo_hash) return NULL;
 	campo_hash->clave = malloc(sizeof(const char)* strlen(clave)+1);
 	campo_hash->valor = dato;
 	strcpy(campo_hash->clave, clave);
 	return campo_hash;
+}
+
+bool guardar_campo_hash(const char *clave, void *dato,lista_t** tabla,size_t tam,hash_destruir_dato_t destruir){
+	size_t indice = funcion_hash(clave,tam);
+	campo_hash_t* campo = crear_campo_hash(clave, dato);
+	if(!campo || !lista_insertar_ultimo(tabla[indice], campo)){
+		destruir_campo_hash(destruir,campo);
+		return false;
+	}
+	return true;
 }
 
 /* Inicializa una tabla de hash con listas enlazadas (hash abierto)
@@ -87,11 +109,14 @@ lista_t** crear_tabla(size_t tam){
 	for(int i = 0; i < tam; i++){
 		tabla[i] = lista_crear();
 		if(!tabla[i]){
+			for(int j=0; j<i;j++)
+				lista_destruir(tabla[j],NULL);
 			free(tabla);
 			return NULL;
 		}
 	}
 	return tabla;
+	
 }
 
 /* Recibe un puntero a un struct hash y busca en el campo hash cuya 
@@ -126,16 +151,10 @@ campo_hash_t* buscar_campo_hash(const hash_t *hash, const char *clave){
  */
 void destruir_tabla(lista_t** tabla, size_t tam, void destruir_dato(void*)){
 	for(int i = 0; i < tam; i++){
-		campo_hash_t* campo_hash = lista_borrar_primero(tabla[i]);
-		while(campo_hash){
-			if(destruir_dato){
-				destruir_dato(campo_hash->valor);
-			}
-			free(campo_hash->clave);
-			free(campo_hash);
-			campo_hash = lista_borrar_primero(tabla[i]);
-		}
-		lista_destruir(tabla[i], free);
+		campo_hash_t* campo;
+		while((campo = lista_borrar_primero(tabla[i])))
+			destruir_campo_hash(destruir_dato,campo);
+		lista_destruir(tabla[i], NULL);
 	}
 	free(tabla);
 }
@@ -174,18 +193,18 @@ bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
  */
 
 hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
-	return _hash_crear(destruir_dato,TAM_INICIAL);
-}
-
-/* Recibe un puntero a un campo hash y elimina el dato, la clave y el
- * campo- Si recibe un puntero nulo no hace nada.
- */
-void destruir_campo_hash(hash_t *hash, campo_hash_t* campo){
-	if(!campo) return;
-	if(hash->destruir)
-		hash->destruir(campo->valor);
-	free(campo->clave);
-	free(campo);
+	hash_t* hash = malloc(sizeof(hash_t));
+	if (!hash) return NULL;
+	lista_t** tabla = crear_tabla(TAM_INICIAL);
+	if(!tabla){
+		free(hash);
+		return NULL;
+	}
+	hash->tam = TAM_INICIAL;
+	hash->cant = 0;
+	hash->destruir = destruir_dato;
+	hash->tabla = tabla;
+	return hash;
 }
 
 /* Guarda un elemento en el hash, si la clave ya se encuentra en la
@@ -197,23 +216,20 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato) {
 	if((hash->cant/hash->tam) >= UMBRAL_MAX)
 		hash_redimensionar(hash, hash->tam * COEF_REDIM);
 
-	if(hash_pertenece(hash, clave)){
-		campo_hash_t* campo = buscar_campo_hash(hash, clave);
-		if(hash->destruir)
+	
+	campo_hash_t* campo = buscar_campo_hash(hash, clave);
+
+	if(campo){
+		if (hash->destruir)
 			hash->destruir(campo->valor);
-		campo->valor = dato;
+		campo->valor= dato;
 		return true;
 	}
-	
-	size_t indice = funcion_hash(clave, hash->tam);
-	campo_hash_t* campo = crear_campo_hash(clave, dato);
-	if(!campo || !lista_insertar_ultimo(hash->tabla[indice], campo)){
-		destruir_campo_hash(hash,campo);
-		return false;
+	if (guardar_campo_hash(clave,dato,hash->tabla,hash->tam,hash->destruir)){
+		hash->cant++;
+		return true;
 	}
-	
-	hash->cant++;
-	return true;
+	return false;
 }
 
 /* Borra un elemento del hash y devuelve el dato asociado.  Devuelve
