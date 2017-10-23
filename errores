@@ -1,9 +1,9 @@
-valgrind --leak-check=full --track-origins=yes --show-reachable=yes ./hash
-==8911== Memcheck, a memory error detector
-==8911== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
-==8911== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
-==8911== Command: ./hash
-==8911== 
+valgrind --leak-check=full --track-origins=yes --show-reachable=yes ./main
+==5755== Memcheck, a memory error detector
+==5755== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==5755== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+==5755== Command: ./main
+==5755== 
 ~~~ PRUEBAS CÁTEDRA ~~~
 Prueba hash crear hash vacio... OK
 Prueba hash la cantidad de elementos es 0... OK
@@ -80,24 +80,16 @@ Prueba hash borrar clave2, es NULL... OK
 Prueba hash pertenece clave2, es falso... OK
 Prueba hash obtener clave2, es NULL... OK
 Prueba hash la cantidad de elementos es 0... OK
-Prueba hash insertar clave vacia: ERROR
-pruebas_catedra.c:185: hash_guardar(hash, clave, valor)
-Prueba hash la cantidad de elementos es 1: ERROR
-pruebas_catedra.c:186: hash_cantidad(hash) == 1
-Prueba hash obtener clave vacia es valor: ERROR
-pruebas_catedra.c:187: hash_obtener(hash, clave) == valor
-Prueba hash pertenece clave vacia, es true: ERROR
-pruebas_catedra.c:188: hash_pertenece(hash, clave)
-Prueba hash borrar clave vacia, es valor: ERROR
-pruebas_catedra.c:189: hash_borrar(hash, clave) == valor
+Prueba hash insertar clave vacia... OK
+Prueba hash la cantidad de elementos es 1... OK
+Prueba hash obtener clave vacia es valor... OK
+Prueba hash pertenece clave vacia, es true... OK
+Prueba hash borrar clave vacia, es valor... OK
 Prueba hash la cantidad de elementos es 0... OK
-Prueba hash insertar clave vacia valor NULL: ERROR
-pruebas_catedra.c:202: hash_guardar(hash, clave, valor)
-Prueba hash la cantidad de elementos es 1: ERROR
-pruebas_catedra.c:203: hash_cantidad(hash) == 1
+Prueba hash insertar clave vacia valor NULL... OK
+Prueba hash la cantidad de elementos es 1... OK
 Prueba hash obtener clave vacia es valor NULL... OK
-Prueba hash pertenece clave vacia, es true: ERROR
-pruebas_catedra.c:205: hash_pertenece(hash, clave)
+Prueba hash pertenece clave vacia, es true... OK
 Prueba hash borrar clave vacia, es valor NULL... OK
 Prueba hash la cantidad de elementos es 0... OK
 Prueba hash almacenar muchos elementos... OK
@@ -106,110 +98,35 @@ Prueba hash pertenece y obtener muchos elementos... OK
 Prueba hash la cantidad de elementos es correcta... OK
 Prueba hash borrar muchos elementos... OK
 Prueba hash la cantidad de elementos es 0... OK
-==8911== 
-==8911== Process terminating with default action of signal 2 (SIGINT)
-==8911==    at 0x4013AA: destruir_tabla (hash.c:155)
-==8911==    by 0x40148E: hash_redimensionar (hash.c:172)
-==8911==    by 0x4015F3: hash_guardar (hash.c:213)
-==8911==    by 0x4034BF: prueba_hash_volumen (pruebas_catedra.c:261)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== HEAP SUMMARY:
-==8911==     in use at exit: 247,368 bytes in 15,082 blocks
-==8911==   total heap usage: 11,810,666 allocs, 11,795,584 frees, 376,682,663 bytes allocated
-==8911== 
-==8911== 32 bytes in 1 blocks are still reachable in loss record 1 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x40150A: hash_crear (hash.c:192)
-==8911==    by 0x40347C: prueba_hash_volumen (pruebas_catedra.c:256)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 8,000 bytes in 1 blocks are still reachable in loss record 2 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4011B7: crear_tabla (hash.c:106)
-==8911==    by 0x401526: hash_crear (hash.c:194)
-==8911==    by 0x40347C: prueba_hash_volumen (pruebas_catedra.c:256)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 12,240 bytes in 510 blocks are still reachable in loss record 3 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4009B7: lista_crear (lista.c:43)
-==8911==    by 0x4011F2: crear_tabla (hash.c:110)
-==8911==    by 0x401412: hash_redimensionar (hash.c:166)
-==8911==    by 0x4015F3: hash_guardar (hash.c:213)
-==8911==    by 0x4034BF: prueba_hash_volumen (pruebas_catedra.c:261)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 16,000 bytes in 1 blocks are still reachable in loss record 4 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4011B7: crear_tabla (hash.c:106)
-==8911==    by 0x401412: hash_redimensionar (hash.c:166)
-==8911==    by 0x4015F3: hash_guardar (hash.c:213)
-==8911==    by 0x4034BF: prueba_hash_volumen (pruebas_catedra.c:261)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 20,000 bytes in 5,000 blocks are still reachable in loss record 5 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x40315E: prueba_hash_volumen (pruebas_catedra.c:224)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 24,000 bytes in 1,000 blocks are still reachable in loss record 6 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4009B7: lista_crear (lista.c:43)
-==8911==    by 0x4011F2: crear_tabla (hash.c:110)
-==8911==    by 0x401526: hash_crear (hash.c:194)
-==8911==    by 0x40347C: prueba_hash_volumen (pruebas_catedra.c:256)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 25,704 bytes in 2,856 blocks are still reachable in loss record 7 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4010CA: crear_campo_hash (hash.c:85)
-==8911==    by 0x401142: guardar_campo_hash (hash.c:93)
-==8911==    by 0x401670: hash_guardar (hash.c:224)
-==8911==    by 0x4034BF: prueba_hash_volumen (pruebas_catedra.c:261)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 45,696 bytes in 2,856 blocks are still reachable in loss record 8 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4010A0: crear_campo_hash (hash.c:83)
-==8911==    by 0x401142: guardar_campo_hash (hash.c:93)
-==8911==    by 0x401670: hash_guardar (hash.c:224)
-==8911==    by 0x4034BF: prueba_hash_volumen (pruebas_catedra.c:261)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 45,696 bytes in 2,856 blocks are still reachable in loss record 9 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x400976: nodo_crear (lista.c:29)
-==8911==    by 0x400A92: lista_insertar_ultimo (lista.c:69)
-==8911==    by 0x401172: guardar_campo_hash (hash.c:94)
-==8911==    by 0x401670: hash_guardar (hash.c:224)
-==8911==    by 0x4034BF: prueba_hash_volumen (pruebas_catedra.c:261)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== 50,000 bytes in 1 blocks are still reachable in loss record 10 of 10
-==8911==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==8911==    by 0x4030DB: prueba_hash_volumen (pruebas_catedra.c:217)
-==8911==    by 0x403E0B: pruebas_hash_catedra (pruebas_catedra.c:412)
-==8911==    by 0x400906: main (main.c:27)
-==8911== 
-==8911== LEAK SUMMARY:
-==8911==    definitely lost: 0 bytes in 0 blocks
-==8911==    indirectly lost: 0 bytes in 0 blocks
-==8911==      possibly lost: 0 bytes in 0 blocks
-==8911==    still reachable: 247,368 bytes in 15,082 blocks
-==8911==         suppressed: 0 bytes in 0 blocks
-==8911== 
-==8911== For counts of detected and suppressed errors, rerun with: -v
-==8911== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
-Makefile:26: fallo en las instrucciones para el objetivo 'valgrind'
-make: *** [valgrind] Interrupción
+Prueba hash insertar clave1... OK
+Prueba hash insertar clave2... OK
+Prueba hash insertar clave3... OK
+Prueba hash iterador esta al final, es false... OK
+Prueba hash iterador ver actual, es una clave valida... OK
+Prueba hash iterador ver actual, no es el mismo puntero... OK
+Prueba hash iterador avanzar es true... OK
+Prueba hash iterador esta al final, es false... OK
+Prueba hash iterador ver actual, es una clave valida... OK
+Prueba hash iterador ver actual, no es el mismo puntero... OK
+Prueba hash iterador avanzar es true... OK
+Prueba hash iterador esta al final, es false... OK
+Prueba hash iterador ver actual, es una clave valida... OK
+Prueba hash iterador ver actual, no es el mismo puntero... OK
+Prueba hash iterador esta al final, es true... OK
+Prueba hash iterador ver actual, es NULL... OK
+Prueba hash iterador avanzar es false... OK
+Prueba hash iterador esta al final, es true... OK
+Prueba hash iterador esta al final, es false... OK
+Prueba hash iteración en volumen... OK
+Prueba hash iteración en volumen, recorrio todo el largo... OK
+Prueba hash iterador esta al final, es true... OK
+Prueba hash iteración en volumen, se cambiaron todo los elementos... OK
+==5755== 
+==5755== HEAP SUMMARY:
+==5755==     in use at exit: 0 bytes in 0 blocks
+==5755==   total heap usage: 245,138 allocs, 245,138 frees, 5,149,892 bytes allocated
+==5755== 
+==5755== All heap blocks were freed -- no leaks are possible
+==5755== 
+==5755== For counts of detected and suppressed errors, rerun with: -v
+==5755== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

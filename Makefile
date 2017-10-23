@@ -7,7 +7,7 @@
 #	make run: Corre el programa
 #	make valgrind: Chequea perdida de memoria
 
-EXEC = hash
+EXEC = main
 CFILES = main.c lista.c hash.c pruebas_catedra.c testing.c
 HFILES = hash.h lista.h testing.h
 
