@@ -58,24 +58,6 @@ void destruir_campo_hash(hash_destruir_dato_t destruir_dato, campo_hash_t* campo
 	free(campo);
 }
 
-/* Crea un hash nuevo, devuelve NULl si hubo algun problema en pedir
- * memoria.
- */
-hash_t* _hash_crear(hash_destruir_dato_t destruir_dato,size_t tam){
-	hash_t* hash = malloc(sizeof(hash_t));
-	if (!hash) return NULL;
-	lista_t** tabla = crear_tabla(tam);
-	if(!tabla){
-		free(hash);
-		return NULL;
-	}
-	hash->tam = tam;
-	hash->cant = 0;
-	hash->destruir = destruir_dato;
-	hash->tabla = tabla;
-	return hash;
-}
-
 /* Recibe una clave y un dato, y asocicia ambos parametros en un campo
  * La clave es copiada.
  */
@@ -93,6 +75,7 @@ campo_hash_t* crear_campo_hash(const char* clave, void* dato){
  * el campo y devuelve false.
  */
 bool guardar_campo_hash(const char *clave, void *dato,lista_t** tabla,size_t tam,hash_destruir_dato_t destruir){
+	if(!clave) return false;
 	size_t indice = funcion_hash(clave,tam);
 	campo_hash_t* campo = crear_campo_hash(clave, dato);
 	if(!campo) return false;
@@ -128,7 +111,7 @@ lista_t** crear_tabla(size_t tam){
  * clave asignada sea la recibida por parametro, si tal campo no se 
  * encontro devuelve NULL.
  * Pre: el hash fue creado
- * Post: Devuelve el campo si fue encontrado.
+ * Post: Devuelve el iterador con el campo si fue encontrado.
  */
 lista_iter_t* buscar_campo_hash(const hash_t *hash, const char *clave){
 	size_t pos = funcion_hash(clave, hash->tam);
@@ -166,6 +149,7 @@ void destruir_tabla(lista_t** tabla, size_t tam, void destruir_dato(void*)){
 bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
 	lista_t** tabla_nueva = crear_tabla(tam_nuevo);
 	hash_iter_t* iter_hash = hash_iter_crear(hash);
+	if(!iter_hash) return false;
 	while(!hash_iter_al_final(iter_hash)){
         campo_hash_t* campo = lista_iter_ver_actual(iter_hash->lista_iter);
         if (!guardar_campo_hash(campo->clave,campo->valor,tabla_nueva,tam_nuevo,hash->destruir)){
@@ -182,6 +166,23 @@ bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
 	return true;
 }
 
+/* Recibe un iterador y avanza sobre la tabla hasta encontrar una posicion
+ * valida, en esa posicion se ubica el iterdaor de la lista correspondiente
+ * Si no se encontro niguna posicion valida el iterador es NULL. 
+ */
+bool avanzar_sobre_tabla(hash_iter_t* iter){
+	size_t i = iter->pos;
+	while(i < iter->hash->tam && lista_esta_vacia(iter->hash->tabla[i]))
+		i++;
+	if(i == iter->hash->tam){
+		iter->lista_iter = NULL;
+		return false;
+	}
+	iter->lista_iter = lista_iter_crear(iter->hash->tabla[i]);
+	if(!iter->lista_iter) return false;
+	iter->pos = i;
+	return true;
+}
 
 /* *****************************************************************
  *                    PRIMITIVAS DEL HASH
@@ -189,7 +190,6 @@ bool hash_redimensionar(hash_t* hash, size_t tam_nuevo){
 
 /* Crea el hash
  */
-
 hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
 	hash_t* hash = malloc(sizeof(hash_t));
 	if (!hash) return NULL;
@@ -215,7 +215,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato) {
 		hash_redimensionar(hash, hash->tam * COEF_REDIM);
 
 	lista_iter_t* iter =  buscar_campo_hash(hash, clave);
-	//if(!iter) return false;
+	if(!iter) return false;
 	campo_hash_t* campo = lista_iter_ver_actual(iter);
 	lista_iter_destruir(iter);
 
@@ -311,21 +311,10 @@ hash_iter_t* hash_iter_crear(const hash_t *hash){
 	if(!iter) return NULL;
 	iter->hash = hash;
 	iter->iterados = 0;
+	iter->pos = 0;
 	iter->lista_iter = NULL;
-	if(hash->cant == 0){
-		iter->pos = 0;
-		return iter;
-	}
-	
-	size_t i = 0;
-	while(lista_esta_vacia(hash->tabla[i]))
-		i++;
-	iter->lista_iter = lista_iter_crear(hash->tabla[i]);
-	if(!iter->lista_iter){
-		free(iter);
-		return NULL;
-	}
-	iter->pos = i;
+	if(hash->cant == 0) return iter;
+	avanzar_sobre_tabla(iter);
 	return iter;
 }
 
@@ -334,26 +323,14 @@ hash_iter_t* hash_iter_crear(const hash_t *hash){
  */
 bool hash_iter_avanzar(hash_iter_t *iter){
 	if (hash_iter_al_final(iter)) return false;
-	if (lista_iter_avanzar(iter->lista_iter) && !lista_iter_al_final(iter->lista_iter)) {
+	if (lista_iter_avanzar(iter->lista_iter)&& !lista_iter_al_final(iter->lista_iter)) {
 		iter->iterados++;
 		return true;
 	}
 	lista_iter_destruir(iter->lista_iter);
-	iter->pos++;
 	iter->iterados++;
-	size_t i = iter->pos;
-	while(i < iter->hash->tam){
-		if(!lista_esta_vacia(iter->hash->tabla[i])){
-			iter->lista_iter = lista_iter_crear(iter->hash->tabla[i]);
-			if(!iter->lista_iter) return false;
-			iter->pos = i;
-			return true;
-		}
-		i++;
-	}
-	iter->lista_iter = NULL;
-	iter->pos = iter->hash->tam - 1;
-	return false;
+	iter->pos++;
+	return avanzar_sobre_tabla(iter);
 }
 
 /* Devuelve clave actual, esa clave no se puede modificar ni liberar.
